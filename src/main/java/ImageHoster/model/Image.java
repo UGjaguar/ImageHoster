@@ -30,7 +30,6 @@ public class Image {
     @Column(columnDefinition = "TEXT")
     private String imageFile;
 
-
     @Column(name = "description")
     private String description;
 
@@ -68,8 +67,6 @@ public class Image {
         this.description = description;
         this.date = date;
     }
-
-
 
     public Integer getId() {
         return id;

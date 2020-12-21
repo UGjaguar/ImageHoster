@@ -1,5 +1,6 @@
 package ImageHoster.controller;
 
+import ImageHoster.model.Comment;
 import ImageHoster.model.Image;
 import ImageHoster.model.Tag;
 import ImageHoster.model.User;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import ImageHoster.service.CommentService;
+
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
@@ -26,6 +29,10 @@ public class ImageController {
 
     @Autowired
     private TagService tagService;
+
+    @Autowired(required = true)
+    private CommentService commentservice;
+
 
     //This method displays all the images in the user home page after successful login
     @RequestMapping("images")
@@ -46,8 +53,10 @@ public class ImageController {
     //Here a list of tags is added in the Model type object
     //this list is then sent to 'images/image.html' file and the tags are displayed
     @RequestMapping("/images/{imageId}/{title}")
-    public String showImage(@PathVariable("title") String title, Model model,@PathVariable Integer imageId) {
+    public String showImage(@PathVariable("title") String title, Model model,@PathVariable("imageId") Integer imageId) {
         Image image = imageService.getImage(imageId);
+        List<Comment> commentList = commentservice.getComments(image.getId(), image.getTitle());
+        model.addAttribute("comments", commentList);
         model.addAttribute("image", image);
         model.addAttribute("tags", image.getTags());
         return "images/image";
@@ -93,23 +102,16 @@ public class ImageController {
     //This string is then displayed by 'edit.html' file as previous tags of an image
     @RequestMapping(value = "/editImage")
     public String editImage(@RequestParam("imageId") Integer imageId, Model model, HttpSession session) {
-        //track user session.
-        User user = (User) session.getAttribute("loggeduser");
-        //Image image = imageService.getImage(imageId);
 
+        Image image = imageService.getImage(imageId);
+        model.addAttribute("image", image);
         String error = "Image owner can only edit the image";
 
-        if (!user.getId().equals(imageService.getUserId(imageId))) {
-            Image image = imageService.getImage(imageId);
-            model.addAttribute("image", image);
+        Boolean ValidateUser = userValidation(image.getUser(), session);
+        if (!ValidateUser) {
             model.addAttribute("editError", error);
             return "images/image";
-        }
-        else {
-            Image image = imageService.getImage(imageId);
-            String tags = convertTagsToString(image.getTags());
-            model.addAttribute("image", image);
-            model.addAttribute("tags", tags);
+        } else {
             return "images/edit";
         }
 
@@ -117,6 +119,15 @@ public class ImageController {
         //model.addAttribute("image", image);
         //model.addAttribute("tags", tags);
         //return "images/edit";
+    }
+    private Boolean userValidation(User user, HttpSession session) {
+
+        User sessionUser = (User) session.getAttribute("loggeduser");
+
+        if (user.getId() == sessionUser.getId()) {
+            return true;
+        } else
+            return false;
     }
 
     //This controller method is called when the request pattern is of type 'images/edit' and also the incoming request is of PUT type
@@ -152,7 +163,7 @@ public class ImageController {
         imageService.updateImage(updatedImage);
         //return "redirect:/images/" + updatedImage.getTitle();
         model.addAttribute("images", updatedImage);
-        return "redirect:/images/";
+        return "redirect:/images/" + updatedImage.getId() + "/" + updatedImage.getTitle();
     }
 
 
@@ -164,13 +175,14 @@ public class ImageController {
         //imageService.deleteImage(imageId);
         //return "redirect:/images";
 
-        User user = (User) session.getAttribute("loggeduser");
-        String deleteError = "Only the owner of the image can delete the image";
 
-        if (!user.getId().equals(imageService.getUserId(imageId))) {
-            Image image = imageService.getImage(imageId);
-            model.addAttribute("image", image);
+        String deleteError = "Only the owner of the image can delete the image";
+        Image image = imageService.getImage(imageId);
+
+        Boolean validUser = userValidation(image.getUser(), session);
+        if (!validUser) {
             model.addAttribute("deleteError", deleteError);
+            model.addAttribute("image", image);
             return "images/image";
         }
         else {
