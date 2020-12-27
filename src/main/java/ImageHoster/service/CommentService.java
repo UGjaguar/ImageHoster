@@ -14,8 +14,8 @@ public class CommentService {
     private CommentRepository commentRepository;
 
     //This function passes the comments to the repository to store it in the database
-    public Comment postComment(Comment newCommentt) {
-        return commentRepository.postComment(newCommentt);
+    public Comment postComment(Comment newComment) {
+        return commentRepository.postComment(newComment);
     }
 
     //This function returns all the comments posted for an image from the data base
